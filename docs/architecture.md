@@ -30,20 +30,37 @@ OctoFit Tracker is a three-tier application for a school fitness program. The st
 
 Record your plan here before editing code.
 
-- Presentation tier decision:
-- Logic tier decision:
-- Data tier decision:
-- Activity tracking approach:
-- Team management approach:
-- Leaderboard approach:
-- Workout suggestions approach:
+- **Presentation tier decision**: React functional components with hooks. Fetch from `/api/*` endpoints; Vite proxies to localhost:8000. Display forms for creation, lists for data, Bootstrap cards for layout. Use React Router for navigation between Activities, Teams, Leaderboard, and Workouts pages.
+- **Logic tier decision**: Express routes in `/api/*` validate input, delegate to service functions, catch errors with meaningful 4xx codes (never 500 from validation). Services orchestrate database queries and business logic.
+- **Data tier decision**: Mongoose schemas with required-field validation. User and Team documents reference each other; Activity and Workout are independent but reference User/Team. Seed data creates representative records idempotently for all four capabilities.
+- **Activity tracking approach**: Accept `userId`, `teamId`, `type`, `minutes`. Validate user and team IDs exist (reject with 400 if not). Compute `points` from activity `type` and `minutes`. Store with `occurredAt` timestamp. Return created activity with all fields.
+- **Team management approach**: Accept `name` and `mascot`. Reject with 400 if `name` missing. Members array starts empty, can be populated separately. Teams are queryable independently of members for now.
+- **Leaderboard approach**: Aggregate activities by team. Sum points per team. Sort by total points descending. Return with computed 1-based rank and team name.
+- **Workout suggestions approach**: Find user by email (return 404 if not found). Analyze recent activities for `type` patterns. Suggest Workout matching most common type as `focus`. Include `reason` explaining why (e.g., "Matches your recent running activity"). Return array with at least one suggestion.
 
 ## Test plan
 
 Record the commands you run and what each failure means.
 
-- Data-tier command: `npm run test:data --prefix octofit-tracker/backend`
-- API command: `npm run test:api --prefix octofit-tracker/backend`
-- Frontend command: `npm test --prefix octofit-tracker/frontend`
-- Backend build command: `npm run build --prefix octofit-tracker/backend`
-- Frontend build command: `npm run build --prefix octofit-tracker/frontend`
+- **Data-tier command**: `npm run test:data --prefix octofit-tracker/backend`
+  - Validates User, Team, Activity, Workout schemas have required fields and structure.
+  - **Failures mean**: Schema is missing field definitions or validation rules (e.g., User needs `required: true` on `name`, `email`, `fitnessGoal`).
+  - **Success**: All five tests pass, confirming schemas match the contract and seed data is idempotent.
+
+- **API command**: `npm run test:api --prefix octofit-tracker/backend`
+  - Tests `/api/activities`, `/api/teams`, `/api/leaderboard`, `/api/workouts/suggestions/:userEmail` endpoints.
+  - **Failures mean**: Service functions are not implemented (returning 501) or logic is incomplete (e.g., leaderboard returns empty array, suggestions missing `reason`).
+  - **Success**: All four tests pass, confirming endpoints validate input, return proper status codes, and compute correct responses.
+
+- **Frontend command**: `npm test --prefix octofit-tracker/frontend`
+  - Tests Activities, Teams, Leaderboard, Workouts components render API data correctly.
+  - **Failures mean**: Components still show "Implementation pending" or don't fetch/display data from `/api/*`.
+  - **Success**: All 15 tests pass, confirming components fetch data, handle loading/error states, and render lists and forms correctly.
+
+- **Backend build command**: `npm run build --prefix octofit-tracker/backend`
+  - Compiles TypeScript to JavaScript for production. Validates no type errors in routes, services, models.
+  - **Success**: dist/ folder contains compiled code ready to run with `node dist/server.js`.
+
+- **Frontend build command**: `npm run build --prefix octofit-tracker/frontend`
+  - Bundles React app with Vite for production. Validates no imports are broken, all routes are reachable.
+  - **Success**: dist/ folder contains optimized HTML, CSS, JS ready to serve.
